@@ -23,10 +23,22 @@ class Config:
     MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "3"))
     VIDEO_QUALITY: str = os.getenv("VIDEO_QUALITY", "best[height<=720]")
     
+    # 事件系统配置
+    EVENT_STORE_TYPE: str = os.getenv("EVENT_STORE_TYPE", "file")  # file, memory, redis
+    EVENT_STORE_PATH: str = os.getenv("EVENT_STORE_PATH", "data/events")
+    MAX_CONCURRENT_WORKFLOWS: int = int(os.getenv("MAX_CONCURRENT_WORKFLOWS", "10"))
+    WORKFLOW_TIMEOUT: int = int(os.getenv("WORKFLOW_TIMEOUT", "600"))  # 10分钟
+    
+    # 熔断器配置
+    CIRCUIT_BREAKER_ENABLED: bool = os.getenv("CIRCUIT_BREAKER_ENABLED", "true").lower() == "true"
+    API_FAILURE_THRESHOLD: int = int(os.getenv("API_FAILURE_THRESHOLD", "5"))
+    API_RECOVERY_TIMEOUT: int = int(os.getenv("API_RECOVERY_TIMEOUT", "300"))  # 5分钟
+    
     # 项目路径
     PROJECT_ROOT: Path = Path(__file__).parent.parent
     OUTPUT_DIR: Path = PROJECT_ROOT / "output"
     TEMP_DIR: Path = PROJECT_ROOT / "temp"
+    DATA_DIR: Path = PROJECT_ROOT / "data"
     
     @classmethod
     def validate(cls) -> bool:
@@ -55,3 +67,12 @@ class Config:
         """创建必要的目录"""
         cls.OUTPUT_DIR.mkdir(exist_ok=True)
         cls.TEMP_DIR.mkdir(exist_ok=True)
+        cls.DATA_DIR.mkdir(exist_ok=True)
+        
+        # 创建事件存储目录
+        event_store_path = Path(cls.EVENT_STORE_PATH)
+        event_store_path.mkdir(parents=True, exist_ok=True)
+        
+        # 创建日志目录
+        log_dir = cls.PROJECT_ROOT / "logs"
+        log_dir.mkdir(exist_ok=True)
