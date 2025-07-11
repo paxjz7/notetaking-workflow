@@ -1,0 +1,27 @@
+# YouTube视频处理
+yt-dlp==2023.12.30
+youtube-search-python==1.6.6
+
+# Google Gemini API
+google-generativeai==0.3.2
+
+# 文本处理和解析
+beautifulsoup4==4.12.2
+requests==2.31.0
+
+# Obsidian文件操作
+pathlib
+
+# 数据处理
+pandas==2.1.4
+json5==0.9.14
+
+# 异步处理
+asyncio
+aiohttp==3.9.1
+
+# 环境变量管理
+python-dotenv==1.0.0
+
+# 日志
+loguru==0.7.2
