@@ -1,28 +1,22 @@
 """
 事件驱动的Gemini处理器
 """
+import asyncio
 from typing import List, Dict, Optional, Any
 from loguru import logger
 
-from ..core.base_processor import BaseProcessor, ProcessingResult, RateLimitConfig, RetryMixin
 from ..core.event_system import EventHandler, Event, EventType
 from ..core.circuit_breaker import ResilientExecutor, CircuitBreakerConfig, CircuitBreakerOpenError
 from ..gemini_summarizer import GeminiSummarizer, VideoSummary
 from ..youtube_processor import VideoInfo
 
-class GeminiSummaryProcessor(BaseProcessor[VideoInfo, VideoSummary]):
+class GeminiSummaryProcessor:
     """
     Gemini总结处理器 - 使用基础处理器模式
     """
     
     def __init__(self, gemini_summarizer: GeminiSummarizer):
-        super().__init__(
-            name="GeminiSummaryProcessor",
-            rate_limit_config=RateLimitConfig(
-                max_requests_per_minute=5,  # Gemini API限制
-                max_concurrent=1
-            )
-        )
+        self.name = "GeminiSummaryProcessor"
         self.gemini_summarizer = gemini_summarizer
         
         # 创建弹性执行器
@@ -34,7 +28,7 @@ class GeminiSummaryProcessor(BaseProcessor[VideoInfo, VideoSummary]):
         )
         self.resilient_executor = ResilientExecutor(circuit_config, max_retries=2)
     
-    async def _process_single(self, video: VideoInfo) -> VideoSummary:
+    async def process_single(self, video: VideoInfo) -> VideoSummary:
         """处理单个视频总结"""
         logger.info(f"开始AI总结视频: {video.title}")
         
@@ -94,7 +88,7 @@ class GeminiSummaryProcessor(BaseProcessor[VideoInfo, VideoSummary]):
             video_id=video.video_id
         )
 
-class GeminiProcessingHandler(EventHandler, RetryMixin):
+class GeminiProcessingHandler(EventHandler):
     """
     Gemini AI处理事件处理器
     """
@@ -139,33 +133,29 @@ class GeminiProcessingHandler(EventHandler, RetryMixin):
             
             logger.info(f"开始AI处理 {len(videos)} 个视频")
             
-            # 批量处理视频总结
-            results = await self.processor.process_batch(videos, max_concurrent=2)
+            # 并行处理视频总结
+            tasks = [self.processor.process_single(video) for video in videos]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # 提取成功的总结
             successful_summaries = []
             failed_summaries = []
             
             for result in results:
-                if result.status.value == 'completed' and result.data:
-                    successful_summaries.append(result.data)
+                if isinstance(result, Exception):
+                    failed_summaries.append({'error': str(result)})
                 else:
-                    failed_summaries.append({
-                        'error': result.error,
-                        'processing_time': result.processing_time
-                    })
+                    successful_summaries.append(result)
             
             logger.info(f"AI处理完成: 成功 {len(successful_summaries)}, 失败 {len(failed_summaries)}")
             
             # 获取处理指标
-            metrics = self.processor.get_metrics()
             circuit_stats = self.processor.resilient_executor.get_circuit_stats()
             
             return Event(
                 event_type=EventType.AI_PROCESSING_COMPLETED,
                 data={
                     'summaries': [summary.__dict__ for summary in successful_summaries],
-                    'processing_metrics': metrics,
                     'circuit_breaker_stats': circuit_stats,
                     'success_count': len(successful_summaries),
                     'failure_count': len(failed_summaries),

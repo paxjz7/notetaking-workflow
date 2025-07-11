@@ -163,8 +163,13 @@ class WorkflowEngine:
         if not instance:
             return None
         
-        if event.event_type == EventType.CONTENT_FOUND:
+        # 处理YouTube搜索
+        if event.event_type == EventType.CONTENT_SEARCH_STARTED:
+            await self._handle_youtube_search(instance, event)
+        elif event.event_type == EventType.CONTENT_FOUND:
             await self._advance_workflow(instance, "search_videos", StepStatus.COMPLETED, event.data)
+        elif event.event_type == EventType.CONTENT_EXTRACTION_STARTED:
+            await self._handle_content_extraction(instance, event)
         elif event.event_type == EventType.CONTENT_EXTRACTED:
             await self._advance_workflow(instance, "extract_content", StepStatus.COMPLETED, event.data)
         elif event.event_type == EventType.AI_PROCESSING_COMPLETED:
@@ -343,6 +348,90 @@ class WorkflowEngine:
         
         await self.event_bus.publish(failure_event)
         logger.error(f"工作流 {instance.id} 执行失败，失败步骤: {failed_step}")
+    
+    async def _handle_youtube_search(self, instance: WorkflowInstance, event: Event):
+        """处理YouTube搜索"""
+        try:
+            query = event.data.get('query', '')
+            max_results = event.data.get('max_results', 3)
+            
+            # 这里应该调用YouTube处理逻辑
+            # 为了简化，我们直接模拟搜索结果
+            mock_videos = [
+                {
+                    'title': f'Mock Video {i+1} for {query}',
+                    'url': f'https://youtube.com/watch?v=mock{i+1}',
+                    'description': f'Mock description for video {i+1}',
+                    'duration': '10:00',
+                    'view_count': '1000',
+                    'upload_date': '2024-01-01',
+                    'channel': 'Mock Channel',
+                    'video_id': f'mock{i+1}'
+                }
+                for i in range(max_results)
+            ]
+            
+            # 发布内容发现事件
+            found_event = Event(
+                event_type=EventType.CONTENT_FOUND,
+                data={
+                    'videos': mock_videos,
+                    'search_query': query,
+                    'count': len(mock_videos)
+                },
+                correlation_id=event.correlation_id,
+                metadata={'source': 'youtube'}
+            )
+            
+            await self.event_bus.publish(found_event)
+            
+        except Exception as e:
+            logger.error(f"YouTube搜索失败: {e}")
+            error_event = Event(
+                event_type=EventType.CONTENT_SEARCH_FAILED,
+                data={'error': str(e), 'query': event.data.get('query', '')},
+                correlation_id=event.correlation_id
+            )
+            await self.event_bus.publish(error_event)
+    
+    async def _handle_content_extraction(self, instance: WorkflowInstance, event: Event):
+        """处理内容提取"""
+        try:
+            videos_data = event.data.get('videos', [])
+            if not videos_data:
+                raise ValueError("没有视频数据需要提取")
+            
+            # 模拟内容提取
+            extracted_content = []
+            for video_data in videos_data:
+                extracted_content.append({
+                    'video_info': video_data,
+                    'transcript': f"Mock transcript for {video_data.get('title', 'Unknown')}",
+                    'extraction_method': 'mock'
+                })
+            
+            # 发布内容提取完成事件
+            extracted_event = Event(
+                event_type=EventType.CONTENT_EXTRACTED,
+                data={
+                    'extracted_content': extracted_content,
+                    'success_count': len(extracted_content),
+                    'failure_count': 0
+                },
+                correlation_id=event.correlation_id,
+                metadata={'handler': 'MockContentExtractor'}
+            )
+            
+            await self.event_bus.publish(extracted_event)
+            
+        except Exception as e:
+            logger.error(f"内容提取失败: {e}")
+            error_event = Event(
+                event_type=EventType.CONTENT_EXTRACTION_FAILED,
+                data={'error': str(e)},
+                correlation_id=event.correlation_id
+            )
+            await self.event_bus.publish(error_event)
     
     async def _handle_step_error(self, instance: WorkflowInstance, error_event: Event):
         """处理步骤错误"""

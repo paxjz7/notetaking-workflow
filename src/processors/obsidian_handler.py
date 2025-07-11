@@ -6,27 +6,21 @@ from typing import List, Dict, Optional, Any
 from pathlib import Path
 from loguru import logger
 
-from ..core.base_processor import BaseProcessor, ProcessingResult, RateLimitConfig
+import asyncio
 from ..core.event_system import EventHandler, Event, EventType
 from ..obsidian_writer import ObsidianWriter
 from ..gemini_summarizer import VideoSummary
 
-class ObsidianDocumentProcessor(BaseProcessor[VideoSummary, str]):
+class ObsidianDocumentProcessor:
     """
     Obsidian文档处理器 - 使用基础处理器模式
     """
     
     def __init__(self, obsidian_writer: ObsidianWriter):
-        super().__init__(
-            name="ObsidianDocumentProcessor",
-            rate_limit_config=RateLimitConfig(
-                max_requests_per_minute=30,  # 文件写入相对快速
-                max_concurrent=5
-            )
-        )
+        self.name = "ObsidianDocumentProcessor"
         self.obsidian_writer = obsidian_writer
     
-    async def _process_single(self, summary: VideoSummary) -> str:
+    async def process_single(self, summary: VideoSummary) -> str:
         """处理单个视频总结，生成Obsidian文档"""
         logger.info(f"开始生成Obsidian文档: {summary.title}")
         
@@ -216,23 +210,18 @@ class ObsidianOutputHandler(EventHandler):
             logger.info(f"开始生成 {len(summaries)} 个Obsidian文档")
             
             # 1. 并行生成所有视频文档
-            document_results = await self.document_processor.process_batch(
-                summaries, 
-                max_concurrent=3
-            )
+            tasks = [self.document_processor.process_single(summary) for summary in summaries]
+            document_results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # 提取成功创建的文件路径
             created_files = []
             failed_files = []
             
             for result in document_results:
-                if result.status.value == 'completed' and result.data:
-                    created_files.append(result.data)
+                if isinstance(result, Exception):
+                    failed_files.append({'error': str(result)})
                 else:
-                    failed_files.append({
-                        'error': result.error,
-                        'processing_time': result.processing_time
-                    })
+                    created_files.append(result)
             
             logger.info(f"文档生成完成: 成功 {len(created_files)}, 失败 {len(failed_files)}")
             
@@ -252,8 +241,7 @@ class ObsidianOutputHandler(EventHandler):
                 logger.error(f"创建文档链接失败: {e}")
                 link_map = {}
             
-            # 获取处理指标
-            metrics = self.document_processor.get_metrics()
+            # 生成完成
             
             logger.success(f"Obsidian输出生成完成: {len(created_files)} 个文件")
             
@@ -263,7 +251,6 @@ class ObsidianOutputHandler(EventHandler):
                     'created_files': created_files,
                     'failed_files': failed_files,
                     'link_map': link_map,
-                    'processing_metrics': metrics,
                     'success_count': len(created_files),
                     'failure_count': len(failed_files),
                     'index_file': created_files[-1] if created_files else None

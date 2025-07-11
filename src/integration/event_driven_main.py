@@ -13,7 +13,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 from src.config import Config
 from src.core.event_system import EventBus, Event, EventType
 from src.core.workflow_engine import WorkflowEngine, YOUTUBE_SUMMARY_WORKFLOW
-from src.processors.youtube_handler import YouTubeSearchHandler, YouTubeExtractionHandler
 from src.processors.gemini_handler import GeminiProcessingHandler
 from src.processors.obsidian_handler import ObsidianOutputHandler
 
@@ -57,10 +56,6 @@ class EventDrivenYouTubeSystem:
     
     def _register_handlers(self):
         """注册所有事件处理器"""
-        # YouTube处理器
-        youtube_search_handler = YouTubeSearchHandler(self.youtube_processor)
-        youtube_extraction_handler = YouTubeExtractionHandler(self.youtube_processor)
-        
         # Gemini处理器
         gemini_handler = GeminiProcessingHandler(self.gemini_summarizer)
         
@@ -69,8 +64,6 @@ class EventDrivenYouTubeSystem:
         
         # 注册到事件总线
         handlers = [
-            youtube_search_handler,
-            youtube_extraction_handler,
             gemini_handler,
             obsidian_handler,
             self.workflow_engine  # 工作流引擎本身也是一个处理器
