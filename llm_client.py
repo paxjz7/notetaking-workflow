@@ -1,6 +1,7 @@
 import asyncio
 import aiohttp
 from openai import OpenAI
+import google.generativeai as genai
 from typing import Optional, Dict, Any
 import json
 from config import Config
@@ -9,22 +10,39 @@ class LLMClient:
     def __init__(self):
         self.config = Config()
         self.client = None
+        self.gemini_model = None
         self.use_local = bool(self.config.LOCAL_LLM_URL)
+        self.use_gemini = bool(self.config.GEMINI_API_KEY)
+        self.use_openai = bool(self.config.OPENAI_API_KEY)
         
-        if not self.use_local:
+        # 优先级: Gemini > OpenAI > 本地LLM
+        if self.use_gemini:
+            genai.configure(api_key=self.config.GEMINI_API_KEY)
+            self.gemini_model = genai.GenerativeModel(self.config.GEMINI_MODEL)
+            print(f"✅ 使用Gemini模型: {self.config.GEMINI_MODEL}")
+        elif self.use_openai:
             self.client = OpenAI(
                 api_key=self.config.OPENAI_API_KEY,
                 base_url=self.config.OPENAI_BASE_URL
             )
+            print(f"✅ 使用OpenAI模型: {self.config.OPENAI_MODEL}")
+        elif self.use_local:
+            print(f"✅ 使用本地LLM: {self.config.LOCAL_LLM_URL}")
+        else:
+            raise ValueError("未配置任何可用的LLM服务")
     
     async def chat_completion(self, prompt: str, temperature: float = 0.7, max_tokens: int = 4000) -> str:
         """
         发送聊天完成请求
         """
-        if self.use_local:
+        if self.use_gemini:
+            return await self._gemini_chat_completion(prompt, temperature, max_tokens)
+        elif self.use_openai:
+            return await self._openai_chat_completion(prompt, temperature, max_tokens)
+        elif self.use_local:
             return await self._local_chat_completion(prompt, temperature, max_tokens)
         else:
-            return await self._openai_chat_completion(prompt, temperature, max_tokens)
+            raise ValueError("未配置任何可用的LLM服务")
     
     async def _openai_chat_completion(self, prompt: str, temperature: float, max_tokens: int) -> str:
         """
@@ -42,6 +60,28 @@ class LLMClient:
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"OpenAI API错误: {e}")
+            return f"API调用失败: {str(e)}"
+    
+    async def _gemini_chat_completion(self, prompt: str, temperature: float, max_tokens: int) -> str:
+        """
+        使用Google Gemini API进行聊天完成
+        """
+        try:
+            # 配置生成参数
+            generation_config = genai.types.GenerationConfig(
+                temperature=temperature,
+                max_output_tokens=max_tokens,
+            )
+            
+            # 生成响应
+            response = self.gemini_model.generate_content(
+                prompt,
+                generation_config=generation_config
+            )
+            
+            return response.text.strip()
+        except Exception as e:
+            print(f"Gemini API错误: {e}")
             return f"API调用失败: {str(e)}"
     
     async def _local_chat_completion(self, prompt: str, temperature: float, max_tokens: int) -> str:

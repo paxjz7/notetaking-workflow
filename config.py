@@ -10,6 +10,10 @@ class Config:
     OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
     OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
     
+    # Gemini配置
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
+    
     # 本地LLM配置（可选）
     LOCAL_LLM_URL = os.getenv('LOCAL_LLM_URL')
     LOCAL_LLM_MODEL = os.getenv('LOCAL_LLM_MODEL', 'llama3:latest')
@@ -22,8 +26,8 @@ class Config:
     # 检查必要配置
     @classmethod
     def validate(cls):
-        if not cls.OPENAI_API_KEY and not cls.LOCAL_LLM_URL:
-            raise ValueError("必须配置OPENAI_API_KEY或LOCAL_LLM_URL")
+        if not cls.OPENAI_API_KEY and not cls.GEMINI_API_KEY and not cls.LOCAL_LLM_URL:
+            raise ValueError("必须配置OPENAI_API_KEY、GEMINI_API_KEY或LOCAL_LLM_URL中的一个")
         return True
 
 # 联想维度模板

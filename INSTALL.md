@@ -45,6 +45,7 @@ python3 main.py "研究关键词"
 ### 必须配置项
 
 **LLM服务** (至少选择一个)：
+- `GEMINI_API_KEY`: Google Gemini API密钥 (推荐)
 - `OPENAI_API_KEY`: OpenAI API密钥
 - `LOCAL_LLM_URL`: 本地LLM服务地址
 
@@ -53,11 +54,15 @@ python3 main.py "研究关键词"
 
 ### 可选配置项
 
+- `GEMINI_MODEL`: Gemini模型名称 (默认: gemini-1.5-flash)
 - `OPENAI_MODEL`: OpenAI模型名称 (默认: gpt-4o-mini)
 - `SEARCH_DELAY`: 搜索间隔秒数 (默认: 1)
 - `MAX_SEARCH_RESULTS`: 每个查询的最大结果数 (默认: 10)
 
 ## 常见问题
+
+### Q: 如何获取Gemini API密钥？
+A: 访问 https://makersuite.google.com/app/apikey 注册并获取API密钥
 
 ### Q: 如何获取OpenAI API密钥？
 A: 访问 https://platform.openai.com/api-keys 注册并获取API密钥

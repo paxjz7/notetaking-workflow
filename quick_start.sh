@@ -104,6 +104,7 @@ configure_env() {
             print_msg "已创建 .env 文件"
             print_warning "请编辑 .env 文件，配置必要的API密钥"
             print_warning "至少需要配置以下之一："
+            print_warning "  - GEMINI_API_KEY (Google Gemini API密钥) [推荐]"
             print_warning "  - OPENAI_API_KEY (OpenAI API密钥)"
             print_warning "  - LOCAL_LLM_URL (本地LLM服务地址)"
             print_warning "  - PUBMED_EMAIL (PubMed搜索邮箱)"

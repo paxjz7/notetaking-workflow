@@ -47,10 +47,13 @@ cp .env.example .env
 
 编辑`.env`文件，配置必要的API密钥：
 ```bash
-# OpenAI API配置
-OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_BASE_URL=https://api.openai.com/v1
+# Google Gemini API配置 (推荐)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-flash
+
+# 或者使用OpenAI API
+# OPENAI_API_KEY=your_openai_api_key_here
+# OPENAI_MODEL=gpt-4o-mini
 
 # 搜索配置
 SEARCH_DELAY=1
@@ -92,16 +95,22 @@ python main.py --config-check "test"
 ## 配置选项
 
 ### LLM配置
-支持两种LLM配置方式：
+支持三种LLM配置方式：
 
-#### 1. OpenAI API (推荐)
+#### 1. Google Gemini API (推荐)
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+```
+
+#### 2. OpenAI API
 ```env
 OPENAI_API_KEY=your_api_key
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-#### 2. 本地LLM (如Ollama)
+#### 3. 本地LLM (如Ollama)
 ```env
 LOCAL_LLM_URL=http://localhost:11434/v1
 LOCAL_LLM_MODEL=llama3:latest

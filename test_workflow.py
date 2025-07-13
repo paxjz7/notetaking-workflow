@@ -35,11 +35,15 @@ class MockTest:
         
         client = LLMClient()
         
-        # 模拟聊天完成
-        if hasattr(client, 'client') and client.client:
+        # 检查已配置的LLM服务
+        if hasattr(client, 'gemini_model') and client.gemini_model:
+            print("✅ Gemini客户端初始化成功")
+        elif hasattr(client, 'client') and client.client:
             print("✅ OpenAI客户端初始化成功")
+        elif client.use_local:
+            print("✅ 本地LLM配置成功")
         else:
-            print("⚠️  OpenAI客户端未配置，使用模拟数据")
+            print("⚠️  未配置LLM服务，使用模拟数据")
         
         return mock_response
     
@@ -142,6 +146,7 @@ async def test_config():
     
     try:
         config = Config()
+        print(f"Gemini API密钥: {'已配置' if config.GEMINI_API_KEY else '未配置'}")
         print(f"OpenAI API密钥: {'已配置' if config.OPENAI_API_KEY else '未配置'}")
         print(f"本地LLM URL: {'已配置' if config.LOCAL_LLM_URL else '未配置'}")
         print(f"PubMed邮箱: {config.PUBMED_EMAIL}")
